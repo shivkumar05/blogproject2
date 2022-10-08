@@ -11,7 +11,7 @@ from rest_framework.decorators import api_view, permission_classes,parser_classe
 from rest_framework import generics ,response
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser ,JSONParser
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
@@ -24,11 +24,9 @@ User = get_user_model()
    
 # Register API  with this Api user can Create their Account 
 
-class Register(GenericAPIView):
-    authentication_classes = []
-    parser_classes = (MultiPartParser, FormParser)
-    serializer_class = RegisterSerializer
+class Register(APIView):
 
+    serializer_class = RegisterSerializer
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
@@ -40,8 +38,7 @@ class Register(GenericAPIView):
 
 
 # Login API  with this Api user can log into their Account 
-class Login(GenericAPIView):
-    parser_classes = (MultiPartParser, FormParser)
+class Login(APIView):
     serializer_class = LoginSerializer
 
     def post(self, request):
@@ -56,11 +53,59 @@ class Login(GenericAPIView):
             return response.Response(serializer.data, status=status.HTTP_200_OK)
         return response.Response({'message': "Invalid credentials, try again"}, status=status.HTTP_401_UNAUTHORIZED)
  
+# Forget_password Api with this api user can share change password link to their associate mail id by entering thier username
+# working fine but made some changes due to multiparser error
+'''
+@api_view(['POST'])
+@parser_classes([JSONParser])
+def Forget_password(request):
+    if request.method == 'POST':
+        email= request.POST.get('email')
+        if not CustomUser.objects.filter(email = email).first():
+            messages.success(request,'No User found with this username')
+            return response.Response(status=status.HTTP_404_NOT_FOUND)
 
+        user_obj=User.objects.get(email=email)
+        token= str(uuid.uuid4())
+        profile_obj=User.objects.get(username = user_obj)
+        profile_obj.forget_password_token= token 
+        profile_obj.save()
+        send_forget_password_mail(user_obj.email, token )
+        messages.success(request,'Reset Password Email has been sent to your Email ID')
+        return response.Response(status=status.HTTP_202_ACCEPTED)
+
+    else:
+        return response.Response(status=status.HTTP_400_BAD_REQUEST)
+'''
+# Forget_password Api with this api user can share change password link to their associate mail id by entering thier username
+
+class Forget_password(APIView):
+    parser_classes=[JSONParser]
+    serializer_class = forget_password_serializer
+    def post(self,request):
+        #email= request.POST.get('email')
+        serializer = self.serializer_class(data=request.data)
+        #print(serializer)
+        email=serializer.initial_data.get('email')
+        print(email)
+        if not CustomUser.objects.filter(email = email).first():
+            messages.success(request,'No User found with this username')
+            return response.Response(status=status.HTTP_404_NOT_FOUND)
+                
+        user_obj=User.objects.get(email=email)
+        token= str(uuid.uuid4())
+        profile_obj=User.objects.get(username = user_obj)
+        profile_obj.forget_password_token= token 
+        profile_obj.save()
+        send_forget_password_mail(user_obj.email, token )
+        messages.success(request,'Reset Password Email has been sent to your Email ID')
+        return response.Response(status=status.HTTP_202_ACCEPTED)
+
+        
 
 #ChangePassword Api with this api user can change their password
 @api_view(['POST','GET'])
-@parser_classes([FormParser,MultiPartParser])
+@parser_classes([FormParser,MultiPartParser,JSONParser])
 def ChangePassword(request , token):
     try:
         print('A')
@@ -91,35 +136,29 @@ def ChangePassword(request , token):
         print(e)
     return response.Response(status=status.HTTP_400_BAD_REQUEST)
 
-
-# Forget_password Api with this api user can share change password link to their associate mail id by entering thier username
-@api_view(['POST','GET'])
-@parser_classes([FormParser,MultiPartParser])
-def Forget_password(request):
-    if request.method == 'POST':
-        username= request.POST.get('username')
-        if not User.objects.filter(username=username).first():
-            messages.success(request,'No User found with this username')
-            return response.Response(status=status.HTTP_404_NOT_FOUND)
-
-        user_obj=User.objects.get(username=username)
-        token= str(uuid.uuid4())
-        profile_obj=User.objects.get(username = user_obj)
-        profile_obj.forget_password_token= token 
-        profile_obj.save()
-        send_forget_password_mail(user_obj.email, token )
-        messages.success(request,'Reset Password Email has been sent to your Email ID')
-        return response.Response(status=status.HTTP_202_ACCEPTED)
-
-    else:
-        return response.Response(status=status.HTTP_400_BAD_REQUEST)
-
+"""class ChangePassword(APIView):
+    parser_classes=[JSONParser]
+    serializer_class = Reset_password_serializer
+    
+    def post(self,request,token):
+        profile_obj = User.objects.get(forget_password_token = token)
+        print(profile_obj)
+        users_id = profile_obj.id
+        print(users_id)
+        serializer = self.serializer_class(data=request.data)
+        print(serializer)
+        new_password=serializer.initial_data.get('email')
+        user_obj = CustomUser.objects.get(id = users_id)
+        user_obj.set_password(new_password)
+        user_obj.save()
+        return response.Response(status=status.HTTP_205_RESET_CONTENT)  
+"""
 
 
 # User_post api with this user can Post their photos or file with description
 class User_Post(APIView):
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
+    #authentication_classes =[BasicAuthentication]
+    #permission_classes =[IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     def post(self, request, *args, **kwargs):
         file_serializer = User_Post_serializer(data=request.data)
@@ -131,24 +170,27 @@ class User_Post(APIView):
 
 
 #view post Api with this we can see different User's posts
+class Post_view(generics.ListCreateAPIView):
+    #authentication_classes =[BasicAuthentication]
+    #permission_classes =[IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    queryset = Post.objects.all()
+    serializer_class = User_Post_serializer
 
 @api_view(['GET'])
-def Post_view(request):
+def Post_view_user(request,pk):
     if request.method=='GET':
-        post=Post.objects.all()
-        serializer=User_Post_serializer(post,many=True)
+        post=Post.objects.get(user=pk)
+        serializer=User_Post_serializer(post,many=False)
         return Response(serializer.data)
 
 
 # User_Social Api with this Api we can Post User's Social Media URL's
 class User_Social(generics.ListCreateAPIView):
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
+    #authentication_classes =[BasicAuthentication]
+    #permission_classes =[IsAuthenticated]
     queryset = Social.objects.all()
     serializer_class = Social_serializer
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
-
 
 #View_User_Social Api with this we can get different User's Social Media URL's
 @api_view(['GET'])
@@ -162,7 +204,7 @@ def User_Social_view(request):
 
 # User_Social_Update with this APi User can Update their Social Media URL's
 @api_view(['POST','GET'])
-@permission_classes((IsAuthenticated, ))
+#@permission_classes((IsAuthenticated, ))
 def User_Social_Update(request,pk):
     if request.method == 'GET':
         social = Social.objects.get(user=pk)
@@ -181,12 +223,10 @@ def User_Social_Update(request,pk):
 
 # User_About Api with this Api we can Post User's Social About
 class User_About(generics.ListCreateAPIView):
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
+    #authentication_classes =[BasicAuthentication]
+    #permission_classes =[IsAuthenticated]
     queryset = About.objects.all()
     serializer_class = About_serializer
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
 
 
 
@@ -201,7 +241,7 @@ def User_About_View(request):
 
 # User_About_Update with this APi User can Update their About
 @api_view(['POST','GET'])
-@permission_classes((IsAuthenticated, ))
+#@permission_classes((IsAuthenticated, ))
 def User_About_Update(request,pk):
     if request.method == 'GET':
         about = About.objects.get(user=pk)
@@ -219,20 +259,18 @@ def User_About_Update(request,pk):
 
 # User_Profile_Pic API with this API User can upload their Profile pic and Background Image
 class User_Profile_Pic(generics.ListCreateAPIView):
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
+    #authentication_classes =[BasicAuthentication]
+    #permission_classes =[IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     queryset = Profile_Pic.objects.all()
     serializer_class = Profile_Pic_serializer
-    authentication_classes =[BasicAuthentication]
-    permission_classes =[IsAuthenticated]
 
 
 
 # User_Profile_Pic_Update with this APi User can Update their About
 @api_view(['POST','GET'])
-@permission_classes((IsAuthenticated, ))
-@parser_classes([FormParser,MultiPartParser])
+#@permission_classes((IsAuthenticated, ))
+#@parser_classes([FormParser,MultiPartParser])
 def User_Profile_pic_Update(request,pk):
     if request.method == 'GET':
         profile_pic = Profile_Pic.objects.get(user=pk)
@@ -289,7 +327,7 @@ def PostDetail(request, pk):
 class BlogPost(APIView):
     #authentication_classes =[BasicAuthentication]
     #permission_classes =[IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser,JSONParser)
     def post(self , request) :
         serializer = BlogSerializer(data=request.data) 
         if serializer.is_valid():              
@@ -301,8 +339,8 @@ class BlogPost(APIView):
 
 # Blog viewset with this API user can edit their blogs 
 @api_view(['PUT'])
-@permission_classes((IsAuthenticated, ))
-@parser_classes([FormParser,MultiPartParser])
+#@permission_classes((IsAuthenticated, ))
+#@parser_classes([FormParser,MultiPartParser])
 def Blog_update(request,pk):
     if request.method == 'PUT':
         blog = Blog.objects.get(id=pk)
@@ -322,7 +360,7 @@ def Blog_view(request):
 
 # Blog viewset with this API user can delete their blogs 
 @api_view(['DELETE'])
-@permission_classes((IsAuthenticated, ))
+#@permission_classes((IsAuthenticated, ))
 def Blog_delete(request,pk):
         blog = Blog.objects.get(id=pk)
         blog.delete()

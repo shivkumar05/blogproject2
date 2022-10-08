@@ -1,4 +1,6 @@
 
+from attr import fields
+from pyrsistent import field
 from rest_framework import serializers
 from .models import *
 
@@ -28,6 +30,11 @@ class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('email', 'password')
+
+class forget_password_serializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ('email',) 
 
 
 class Social_serializer(serializers.ModelSerializer):

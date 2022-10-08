@@ -4,12 +4,13 @@ from django.urls import path
 from accounts.views import *
 from . import views
 urlpatterns = [
-    path('login/', views.Login.as_view(), name="login"),
-    path('register/', views.Register.as_view(), name="Register"),
-    path('forget_password/',views.Forget_password, name="forget_password"),
+    path('login/', Login.as_view(), name="login"),
+    path('register/', Register.as_view(), name="Register"),
+    path('forget_password/',Forget_password.as_view(), name="forget_password"),
     path('change-password/<token>/',views.ChangePassword, name="change_password"),
     path('user_post/',User_Post.as_view(),name='user_post'),
-    path('post_view/',views.Post_view,name='view_post'),
+    path('post_view_user/<int:pk>/', views.Post_view_user,name='Post_view_user'),
+    path('post_view/',Post_view.as_view(),name='view_post'),
     path('user_social/', User_Social.as_view(),name='user_social'),
     path('user_social_view/',views.User_Social_view,name='user_social'),
     path('user_social_update/<int:pk>/',views.User_Social_Update,name='User_Social_Update'),
@@ -21,7 +22,7 @@ urlpatterns = [
     path('like/<int:id>/',views.Like_Post,name='like_post'),
     path('user_comment/',User_Comment.as_view(),name='user_comment'),
     path('postdetail/<int:pk>/',views.PostDetail,name='PostDetail'),
-    path('blogpost/',BlogPost.as_view(),name='blog'),
+    path('create_blog/',BlogPost.as_view(),name='blog'),
     path('blog_view/',views.Blog_view,name='blog_view'),
     path('blog_update/<int:pk>/',views.Blog_update,name='blog_update'),
     path('blog_delete/<int:pk>/',views.Blog_delete,name='blog_delete'),

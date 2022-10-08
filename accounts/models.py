@@ -35,7 +35,7 @@ class Profile_Pic(models.Model):
         return url
 
     def __str__(self):
-        return self.user.username
+        return self.user.email
 
 
 class Blog(models.Model):
@@ -46,7 +46,7 @@ class Blog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
     is_approved = models.BooleanField(default=False)
     def __str__(self):
-        return self.blog_name[0:20]+'....'+'by '+self.user.username
+        return self.blog_name[0:20]+'....'+'by '+self.user.email
 
 
 class Post(models.Model):
@@ -64,7 +64,7 @@ class Post(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.post_name+'...'+'by'+ self.user.username
+        return self.post_name+'...'+'by'+ self.user.email
 
     
     @property
@@ -92,7 +92,7 @@ class Social(models.Model):
     facebook = models.URLField(max_length=500)
 
     def __str__(self):
-        return self.user.username
+        return self.user.first_name
 
 class About(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,primary_key=True)
@@ -103,7 +103,7 @@ class About(models.Model):
     Studied_at = models.CharField(max_length=100)
 
     def __str__(self):
-        return self.user.username
+        return self.user.email
     
 class Comment(models.Model):
     post = models.ForeignKey(Post,on_delete=models.CASCADE)
@@ -112,7 +112,7 @@ class Comment(models.Model):
     time = models.DateTimeField(default=now)
     
     def __str__(self):
-        return self.text[0:10]+'...'+'by '+ self.user.username
+        return self.text[0:10]+'...'+'by '+ self.user.email
 
 
 
@@ -122,3 +122,11 @@ class Comment(models.Model):
 # INNER JOIN accounts_about ON accounts_about.user_id = accounts_customuser.id
 # INNER JOIN accounts_post ON accounts_post.user_id = accounts_customuser.id
 
+# {
+# "email":"vikaskohli614@gmail.com",
+# "username":"vikaskohli",
+# "password":"misti@123",
+# "first_name":"vikas",
+# "last_name":"kohli",
+# "number":"9876543212"
+# }
